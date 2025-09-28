@@ -1,5 +1,16 @@
 ---
 
+- name: Disable SWAP
+  become: true
+  shell: |
+    swapoff -a
+
+- name: Disable SWAP in fstab
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+
 - name: Create k0s Directories
   become: true
   file:
@@ -27,7 +38,7 @@
   block:
     - name: Create default k0s config
       register: default_k0s_config
-      command: k0s default-config > {{ k0s_config_dir }}/k0s.yaml
+      shell: k0s config create > {{ k0s_config_dir }}/k0s.yaml
     - name: Store default k0f config
       copy:
         dest: "{{ k0s_config_dir }}/k0s.yaml"

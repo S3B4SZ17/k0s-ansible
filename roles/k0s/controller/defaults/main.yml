@@ -1,2 +1,3 @@
 ---
 k0s_config_dir: /etc/k0s
+extra_args:
