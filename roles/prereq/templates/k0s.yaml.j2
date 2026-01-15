@@ -14,6 +14,8 @@ spec:
     port: 6443
     sans:
     - {{ hostvars['k0s-1'].ansible_host }}
+    extraArgs:
+      encryption-provider-config: {{ k0s_data_dir }}/encryption/encryption-config.yaml
     # Add more interfaces/IPs as needed
   controllerManager: {}
   extensions:

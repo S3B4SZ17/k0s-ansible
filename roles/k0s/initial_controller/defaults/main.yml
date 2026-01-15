@@ -4,3 +4,5 @@ k0s_data_dir: /var/lib/k0s
 artifacts_dir: "{{ inventory_dir }}/artifacts"
 k0s_single_node: false
 extra_args: "--enable-dynamic-config --enable-worker --no-taints"
+k0s_use_custom_config: false
+k8s_encryption_secret_key: ""

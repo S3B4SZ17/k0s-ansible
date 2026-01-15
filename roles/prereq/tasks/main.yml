@@ -1,5 +1,4 @@
 ---
-
 - name: Disable SWAP
   become: true
   shell: |
@@ -10,6 +9,33 @@
     path: /etc/fstab
     regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
     replace: '# \1'
+
+- name: Install yq
+  block:
+    - name: Install yq via package manager
+      package:
+        name: yq
+        state: present
+        update_cache: true
+
+    - name: Check yq version
+      command: yq --version
+      register: yq_version
+      changed_when: false
+
+    - name: Set fact if yq v4
+      set_fact:
+        yq_v4_installed: "{{ 'version 4' in yq_version.stdout }}"
+  rescue:
+    - set_fact:
+        yq_v4_installed: false
+
+- name: Install yq v4 binary fallback
+  get_url:
+    url: "https://github.com/mikefarah/yq/releases/download/v4.49.2/yq_linux_{{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}"
+    dest: /usr/local/bin/yq
+    mode: "0755"
+  when: not yq_v4_installed
 
 - name: Create k0s Directories
   become: true
@@ -38,12 +64,12 @@
   block:
     - name: Create default k0s config
       register: default_k0s_config
-      shell: k0s config create > {{ k0s_config_dir }}/k0s.yaml
-    - name: Store default k0f config
+      shell: k0s config create
+    - name: Store default k0s config
       copy:
         dest: "{{ k0s_config_dir }}/k0s.yaml"
         content: "{{ default_k0s_config.stdout }}"
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
-        mode: 0600
+        mode: 0755
   when: not k0s_use_custom_config

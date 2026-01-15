@@ -1,4 +1,37 @@
 ---
+- name: Create k0s encryption dir
+  become: true
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+  loop:
+    - "{{ k0s_data_dir }}/encryption"
+
+- name: Write the custom encryption file
+  become: true
+  template:
+    src: encryption-config.yaml.j2
+    dest: "{{ k0s_data_dir }}/encryption/encryption-config.yaml"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: 0755
+
+- name: Configure k0s API encryption provider
+  become: true
+  shell: |
+    yq -i '
+      .spec.api.extraArgs |= (. // {}) |
+      .spec.api.extraArgs["encryption-provider-config"] = "{{ k0s_data_dir }}/encryption/encryption-config.yaml" |
+      .spec.api.extraArgs["encryption-provider-config-automatic-reload"] = "true"
+    ' {{ k0s_config_dir }}/k0s.yaml
+  when: not k0s_use_custom_config
+
+- name: Validate k0s config
+  become: true
+  command: k0s config validate --config {{ k0s_config_dir }}/k0s.yaml
 
 - name: Create k0s initial controller service with install command
   register: install_initial_controller_cmd
@@ -85,7 +118,7 @@
 - name: Set controller IP in kubeconfig
   replace:
     path: ~{{ ansible_user }}/k0s-kubeconfig.yml
-    regexp: 'localhost'
+    regexp: "localhost"
     replace: "{{ ansible_host }}"
 
 - name: Copy kubeconfig
