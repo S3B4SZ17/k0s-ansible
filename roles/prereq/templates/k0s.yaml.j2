@@ -6,20 +6,43 @@ metadata:
   namespace: kube-system
 spec:
   api:
-    address: {{ hostvars['k0s-1'].ansible_host }}
+    address: {{ k0s_control_plane_ip }}
     ca:
       certificatesExpireAfter: 8760h0m0s
       expiresAfter: 87600h0m0s
     k0sApiPort: 9443
     port: 6443
     sans:
-    - {{ hostvars['k0s-1'].ansible_host }}
+    - {{ k0s_control_plane_ip }}
     extraArgs:
       encryption-provider-config: {{ k0s_data_dir }}/encryption/encryption-config.yaml
     # Add more interfaces/IPs as needed
   controllerManager: {}
   extensions:
     helm:
+      repositories:
+        - name: longhorn
+          url: https://charts.longhorn.io
+      charts:
+        - name: longhorn
+          chartname: longhorn/longhorn
+          namespace: longhorn-system
+          version: 1.13.0
+          values: |
+            longhornUI:
+              # -- Replica count for Longhorn UI.
+              replicas: 1
+            csi:
+              # -- kubelet root directory. When unspecified, Longhorn uses the default value.
+              kubeletRootDir: /var/lib/k0s/kubelet
+            global:
+              tolerations:
+                - key: "mode"
+                  operator: "Equal"
+                  value: "power"
+                  effect: "NoSchedule"              
+            defaultSettings:
+              taintToleration: "mode=power:NoSchedule"
       concurrencyLevel: 5
   installConfig:
     users:
@@ -56,7 +79,7 @@ spec:
       ca:
         certificatesExpireAfter: 8760h0m0s
         expiresAfter: 87600h0m0s
-      peerAddress: {{ hostvars['k0s-1'].ansible_host }}
+      peerAddress: {{ k0s_control_plane_ip }}
     type: etcd
   telemetry:
     enabled: false
